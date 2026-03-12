@@ -3,6 +3,8 @@
 #include <vector>
 #include <fstream>
 #include <sstream>
+#include <queue>
+#include <iomanip>
 
 using namespace std;
 
@@ -14,7 +16,7 @@ struct Queue {
 
 struct Process {
     string PID = "";
-    int arrivalTime = 0, burstTime = 0, turnaroundTime = 0, waitingTime = 0, remainingTime = 0, completionTime = 0;
+    int arrivalTime = 0, burstTime = 0, turnaroundTime = 0, waitingTime = 0, remainingTime = 0, completionTime = 0, predictedTime = 0;
     string QueueID = "";
 };
 
@@ -66,7 +68,7 @@ void readFile(string filename, vector<Queue>& queue, vector<Process>& processes)
     
 }
 
-void SJF(vector<Process>& processes, string QueueID, int& currentTime, int timeSlice) {
+void SJF(vector<Process>& processes, string QueueID, int& currentTime, int timeSlice, ofstream& outputFile) {
     int processTime = 0; //Thời gian chạy process
 
     while (processTime < timeSlice) {
@@ -90,9 +92,7 @@ void SJF(vector<Process>& processes, string QueueID, int& currentTime, int timeS
         int extraTime = timeSlice - processTime; //Thời gian dư (xài cho process kế)
         int runTime = min(p.remainingTime, extraTime); //Thời gian chạy
 
-        cout << "[" << currentTime << "-" << currentTime + runTime << "]" << '\n';
-        cout << QueueID << '\n' 
-            << p.PID << '\n';
+        outputFile << "[" << currentTime << "-" << currentTime + runTime << "]" <<"                "<<QueueID << "                "<< p.PID << '\n';
 
         currentTime += runTime; //Update thời gian
         p.remainingTime -= runTime; //Update thời gian cần chạy
@@ -107,17 +107,62 @@ void SJF(vector<Process>& processes, string QueueID, int& currentTime, int timeS
     }
 }
 
-void runQueue(vector<Process>& processes, vector<Queue>& queues) {
+void SRTN(vector<Process>& processes, string QueueID, int& currentTime, int timeSlice, ofstream& outputFile) {
+    int processTime = 0; //Thời gian chạy process
+    int currentIndex = -1; // index của process đang chạy hiện tại
+    int start = 0;      // thời gian bắt đầu của đoạn hiện tại
+
+    //Vòng lặp chạy đến khi hết time slice
+    while (processTime < timeSlice) {
+        int index = -1;
+        int shortestBurst = INT_MAX;
+        for (int i = 0; i < processes.size(); i++) {
+            if ((processes[i].QueueID == QueueID) && (processes[i].arrivalTime <= currentTime) && (processes[i].remainingTime > 0)) {
+                if (processes[i].remainingTime < shortestBurst) {
+                    shortestBurst = processes[i].remainingTime;
+                    index = i;
+                }
+            }
+        }
+        if (index == -1) break;
+
+        // So sánh giá trị index mới với currentIndex, nếu process thay đổi thì in process cũ
+        if (index != currentIndex) {
+            if (currentIndex != -1)
+                outputFile << "[" << start << "-" << currentTime << "]" << "                " << QueueID << "                " << processes[currentIndex].PID << '\n';
+            currentIndex = index;
+            start = currentTime;
+        }
+
+        processes[index].remainingTime--;
+        currentTime++;
+        processTime++;
+
+        //Công thức tính các thời gian
+        if (processes[index].remainingTime == 0) {
+            processes[index].completionTime = currentTime;
+            processes[index].turnaroundTime = processes[index].completionTime - processes[index].arrivalTime;
+            processes[index].waitingTime = processes[index].turnaroundTime - processes[index].burstTime;
+        }
+    }
+
+    //In ra thời gian chạy của process cuối
+    if (currentIndex != -1)
+        outputFile << "[" << start << "-" << currentTime << "]" << "                " << QueueID << "                " << processes[currentIndex].PID << '\n';
+}
+
+void runQueue(vector<Process>& processes, vector<Queue>& queues, ofstream& outputFile) {
     int currentTime = 0;
     int finished = 0; //Số process hoàn thành
 
     while (finished < processes.size()) { //Còn process cần chạy
         for (int i = 0; i < queues.size(); i++) {
-            cout << "Doing: " << queues[i].QID << '\n';
             if (queues[i].schedulingPolicy == "SJF") {
-                SJF(processes, queues[i].QID, currentTime, queues[i].timeSlice);
+                SJF(processes, queues[i].QID, currentTime, queues[i].timeSlice, outputFile);
             }
-            //Thêm SRTN
+            if (queues[i].schedulingPolicy == "SRTN") {
+                SRTN(processes, queues[i].QID, currentTime, queues[i].timeSlice, outputFile);
+            }
         }
 
         //Đếm lại có bao nhiêu process đã hoàn thành
@@ -128,27 +173,37 @@ void runQueue(vector<Process>& processes, vector<Queue>& queues) {
             }
         }
     }
-}
 
+}
 
 int main()
 {
     vector<Queue> queues;
     vector<Process> processes;
+    ofstream outputFile("output.txt");
 
     readFile("test.txt", queues, processes);
-    runQueue(processes, queues);
+    outputFile << "\n================== CPU SCHEDULING DIAGRAM ==================\n";
+    outputFile <<"\n[Start - End]        Queue        Process\n";
+    outputFile << "--------------------------------------------------------------\n";
+    runQueue(processes, queues, outputFile);
 
-    
-    cout << "PID" << "  " << "Completion" << "  " << "Turnaround" << "  " << "Waiting" << '\n';
+    outputFile << "\n================ PROCESS STATISTICS ================\n";
+    outputFile << left << setw(12) << "\nProcess" << setw(12) << "Arrival" << setw(10) << "Burst" << setw(15) << "Completion" << setw(15) << "Turnaround" << setw(10) << "Waiting" << '\n';
+    outputFile << "---------------------------------------------------------------------------------\n";
+    double averageTurnaroundTime = 0;
+    double averageWaitingTime = 0;
     for (int i = 0; i < processes.size(); i++) {
         Process& p = processes[i];
-        cout << p.PID << "  "
-            << p.completionTime << "    "
-            << p.turnaroundTime << "    "
-            << p.waitingTime << '\n';
+        averageTurnaroundTime += p.turnaroundTime;
+        averageWaitingTime += p.waitingTime;
+        outputFile << left << setw(12) << p.PID << setw(12) << p.arrivalTime << setw(10) << p.burstTime << setw(15) << p.completionTime << setw(15) << p.turnaroundTime << setw(10) << p.waitingTime << '\n';
     }
-
+    outputFile << "---------------------------------------------------------------------------------\n";
+    outputFile << "\nAverage Turnaround Time : " << averageTurnaroundTime / processes.size();
+    outputFile << "\nAverage Waiting Time : " << averageWaitingTime / processes.size() << '\n';
+    outputFile << "\n============================================================\n";
+    outputFile.close();
     return 0;
 }
 
