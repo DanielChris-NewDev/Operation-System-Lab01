@@ -78,8 +78,8 @@ void SJF(vector<Process>& processes, string QueueID, int& currentTime, int timeS
         for (int i = 0; i < processes.size(); i++) { //Chạy qua từng process
             if (processes[i].QueueID == QueueID && processes[i].remainingTime > 0) { //Tìm process cùng queueID và cần CPU
                 if (processes[i].arrivalTime <= currentTime) { //process phải arrive trước thời gian hiện tại
-                    if (processes[i].burstTime < shortestBurst) { //Tìm vị trí process ngắn nhất hiện tại
-                        shortestBurst = processes[i].burstTime;
+                    if (processes[i].remainingTime < shortestBurst) { //Tìm vị trí process ngắn nhất hiện tại
+                        shortestBurst = processes[i].remainingTime;
                         index = i;
                     }
                 }
