@@ -180,9 +180,9 @@ int main()
 {
     vector<Queue> queues;
     vector<Process> processes;
-    ofstream outputFile("output.txt");
+    ofstream outputFile("Output.txt");
 
-    readFile("test.txt", queues, processes);
+    readFile("Input.txt", queues, processes);
     outputFile << "\n================== CPU SCHEDULING DIAGRAM ==================\n";
     outputFile <<"\n[Start - End]        Queue        Process\n";
     outputFile << "--------------------------------------------------------------\n";
