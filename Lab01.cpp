@@ -118,14 +118,18 @@ void SRTN(vector<Process>& processes, string QueueID, int& currentTime, int time
     while (processTime < timeSlice) {
         int index = -1;
         int shortestBurst = INT_MAX;
+        //Qua mỗi vòng lặp, kiểm tra xem trong cùng một hàng đợi, có process nào đã đến và đang cần dùng CPU hay không
         for (int i = 0; i < processes.size(); i++) {
             if ((processes[i].QueueID == QueueID) && (processes[i].arrivalTime <= currentTime) && (processes[i].remainingTime > 0)) {
+                //Kiểm tra xem trong hàng đợi, process nào có thời gian sử dụng CPU thấp nhất
+                // Sau đó chọn process đó bằng cách cập nhật lại biến index và shortestBurst
                 if (processes[i].remainingTime < shortestBurst) {
                     shortestBurst = processes[i].remainingTime;
                     index = i;
                 }
             }
         }
+
         if (index == -1) {
             break;
         }
@@ -135,11 +139,16 @@ void SRTN(vector<Process>& processes, string QueueID, int& currentTime, int time
             if (currentIndex != -1) {
                 outputFile << "[" << start << "-" << currentTime << "]" << "                " << QueueID << "                " << processes[currentIndex].PID << '\n';
             }
+
+            //Cập nhật current index với index mới của process dang chạy
+            // Thời gian bắt đầu chạy của process mới bằng với current time
             currentIndex = index;
             start = currentTime;
         }
 
+        //Thời gian chạy của process được chọn giảm đi 1
         processes[index].remainingTime--;
+        //Thời gian chạy hiện tại và thời gian cho 1 time slice cũng tăng lên 1
         currentTime++;
         processTime++;
 
