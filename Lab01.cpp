@@ -9,15 +9,15 @@
 using namespace std;
 
 struct Queue {
-    string QID = "";
-    int timeSlice = 0;
-    string schedulingPolicy = "";
+    string QID;
+    int timeSlice;
+    string schedulingPolicy;
 };
 
 struct Process {
-    string PID = "";
-    int arrivalTime = 0, burstTime = 0, turnaroundTime = 0, waitingTime = 0, remainingTime = 0, completionTime = 0, predictedTime = 0;
-    string QueueID = "";
+    string PID;
+    int arrivalTime, burstTime, turnaroundTime, waitingTime, remainingTime, completionTime;
+    string QueueID;
 };
 
 void readFile(string filename, vector<Queue>& queue, vector<Process>& processes) {
@@ -85,14 +85,16 @@ void SJF(vector<Process>& processes, string QueueID, int& currentTime, int timeS
                 }
             }
         }
-        if (index == -1) break; //Không có process nào cả
+        if (index == -1) {
+            break; //Không có process nào cả
+        }
 
         Process& p = processes[index]; //Process đang sử dụng CPU
 
         int extraTime = timeSlice - processTime; //Thời gian dư (xài cho process kế)
         int runTime = min(p.remainingTime, extraTime); //Thời gian chạy
 
-        outputFile << "[" << currentTime << "-" << currentTime + runTime << "]" <<"                "<<QueueID << "                "<< p.PID << '\n';
+        outputFile << "[" << currentTime << "-" << currentTime + runTime << "]" << "                " << QueueID << "                " << p.PID << '\n';
 
         currentTime += runTime; //Update thời gian
         p.remainingTime -= runTime; //Update thời gian cần chạy
@@ -124,12 +126,15 @@ void SRTN(vector<Process>& processes, string QueueID, int& currentTime, int time
                 }
             }
         }
-        if (index == -1) break;
+        if (index == -1) {
+            break;
+        }
 
         // So sánh giá trị index mới với currentIndex, nếu process thay đổi thì in process cũ
         if (index != currentIndex) {
-            if (currentIndex != -1)
+            if (currentIndex != -1) {
                 outputFile << "[" << start << "-" << currentTime << "]" << "                " << QueueID << "                " << processes[currentIndex].PID << '\n';
+            }
             currentIndex = index;
             start = currentTime;
         }
@@ -147,8 +152,9 @@ void SRTN(vector<Process>& processes, string QueueID, int& currentTime, int time
     }
 
     //In ra thời gian chạy của process cuối
-    if (currentIndex != -1)
+    if (currentIndex != -1) {
         outputFile << "[" << start << "-" << currentTime << "]" << "                " << QueueID << "                " << processes[currentIndex].PID << '\n';
+    }
 }
 
 void runQueue(vector<Process>& processes, vector<Queue>& queues, ofstream& outputFile) {
@@ -184,20 +190,20 @@ int main()
 
     readFile("Input.txt", queues, processes);
     outputFile << "\n================== CPU SCHEDULING DIAGRAM ==================\n";
-    outputFile <<"\n[Start - End]        Queue        Process\n";
+    outputFile << "\n[Start - End]        Queue        Process\n";
     outputFile << "--------------------------------------------------------------\n";
     runQueue(processes, queues, outputFile);
 
     outputFile << "\n================ PROCESS STATISTICS ================\n";
     outputFile << left << setw(12) << "\nProcess" << setw(12) << "Arrival" << setw(10) << "Burst" << setw(15) << "Completion" << setw(15) << "Turnaround" << setw(10) << "Waiting" << '\n';
     outputFile << "---------------------------------------------------------------------------------\n";
-    double averageTurnaroundTime = 0;
-    double averageWaitingTime = 0;
+    double averageTurnaroundTime = 0.0;
+    double averageWaitingTime = 0.0;
     for (int i = 0; i < processes.size(); i++) {
         Process& p = processes[i];
         averageTurnaroundTime += p.turnaroundTime;
         averageWaitingTime += p.waitingTime;
-        outputFile << left << setw(12) << p.PID << setw(12) << p.arrivalTime << setw(10) << p.burstTime << setw(15) << p.completionTime << setw(15) << p.turnaroundTime << setw(10) << p.waitingTime << '\n';
+        outputFile << left << setw(12) << p.PID << setw(12) << p.arrivalTime << setw(13) << p.burstTime << setw(15) << p.completionTime << setw(13) << p.turnaroundTime << setw(10) << p.waitingTime << '\n';
     }
     outputFile << "---------------------------------------------------------------------------------\n";
     outputFile << "\nAverage Turnaround Time : " << averageTurnaroundTime / processes.size();
